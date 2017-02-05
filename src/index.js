@@ -10,6 +10,8 @@
 var crypto = require('crypto');
 var object = require('blear.utils.object');
 var random = require('blear.utils.random');
+var url = require('blear.utils.url');
+var path = require('blear.node.path');
 
 var defaults = {
     accessKey: '',
@@ -19,16 +21,20 @@ var defaults = {
     dirname: '/',
     filename: null,
     expires: 10 * 60 * 1000,
-    mimeLimit: 'image/*'
+    mimeLimit: 'image/*',
+    // 是否绝对路径
+    // 是：转换后的 url 包含 @ 符号，即 http://qiniu.cdn.com/@/path/to/file.png，或者两个斜杆表示 http://qiniu.cdn.com//path/to/file.png
+    // 否：转换后的 url 不含 @ 符号，即 http://qiniu.cdn.com/path/to/file.png
+    absolutely: false
 };
-var endRE = /\/$/;
+var slashStartRE = /^\//;
 
 exports.defaults = defaults;
 
 /**
  * 覆盖默认配置
  * @param [configs] {Object} 配置
- * @param [configs.host="/"] {String} 仓库
+ * @param [configs.host="/"] {String} 域
  * @param [configs.bucket=""] {String} 仓库
  * @param [configs.accessKey=""] {String} access_key
  * @param [configs.secretKey=""] {String} secret_key
@@ -36,6 +42,7 @@ exports.defaults = defaults;
  * @param [configs.filename] {String} 上传文件名，否则随机生成
  * @param [configs.expires] {Number} 凭证有效期，默认 10 分钟，单位毫秒
  * @param [configs.mimeLimit="image/*"] {String} 上传文件限制类型
+ * @param [configs.absolutely] {Boolean} 是否绝对路径
  */
 exports.config = function (configs) {
     object.assign(defaults, configs);
@@ -44,7 +51,7 @@ exports.config = function (configs) {
 /**
  * 生成上传 key 和上传凭证
  * @param [configs] {Object} 配置
- * @param [configs.host="/"] {String} 仓库
+ * @param [configs.host="/"] {String} 域
  * @param [configs.bucket=""] {String} 仓库
  * @param [configs.accessKey=""] {String} access_key
  * @param [configs.secretKey=""] {String} secret_key
@@ -52,25 +59,32 @@ exports.config = function (configs) {
  * @param [configs.filename] {String} 上传文件名，否则随机生成
  * @param [configs.expires] {Number} 凭证有效期，默认 10 分钟，单位毫秒
  * @param [configs.mimeLimit="image/*"] {String} 上传文件限制类型
+ * @param [configs.absolutely] {Boolean} 是否绝对路径
  * @returns {{key: String, token: String}}
  */
 exports.signature = function (configs) {
     configs = object.assign({}, defaults, configs);
 
-    if (configs.dirname && configs.dirname.length > 1) {
-        configs.dirname = endRE.test(configs.dirname) ? configs.dirname : configs.dirname + '/';
-    } else {
-        configs.dirname = '';
+    // if (configs.dirname && configs.dirname.length > 1) {
+    //     configs.dirname = endRE.test(configs.dirname) ? configs.dirname : configs.dirname + '/';
+    // } else {
+    //     configs.dirname = '';
+    // }
+    //
+    // if (configs.host.slice(-1) === '/') {
+    //     configs.host = configs.host.slice(0, -1);
+    // }
+
+    var key = path.join(configs.dirname, (configs.filename || random.guid()));
+    var qiniuURL = configs.host;
+
+    if (configs.absolutely) {
+        qiniuURL= url.join(qiniuURL, '@');
+    }else{
+        key = key.replace(slashStartRE, '');
     }
 
-    if (configs.host.slice(-1) === '/') {
-        configs.host = configs.host.slice(0, -1);
-    }
-
-    var key = configs.dirname + (configs.filename || random.guid());
-
-    // 文件名
-    configs.dirname = String(configs.dirname).trim();
+    qiniuURL = url.join(qiniuURL, key);
 
     var encoded = urlsafeBase64Encode(JSON.stringify({
         scope: configs.bucket + ':' + key,
@@ -83,7 +97,7 @@ exports.signature = function (configs) {
     return {
         key: key,
         token: configs.accessKey + ':' + encoded_signed + ':' + encoded,
-        url: configs.host + key
+        url: qiniuURL
     };
 };
 
