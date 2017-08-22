@@ -11,20 +11,65 @@ var crypto = require('crypto');
 var object = require('blear.utils.object');
 var random = require('blear.utils.random');
 var url = require('blear.utils.url');
+var access = require('blear.utils.access');
 var path = require('blear.node.path');
 
 var defaults = {
+    /**
+     * @type String
+     * @desc 访问令牌
+     */
     accessKey: '',
+
+    /**
+     * @type String
+     * @desc 访问密钥
+     */
     secretKey: '',
+
+    /**
+     * @type String
+     * @desc 访问仓库
+     */
     bucket: '',
+
+    /**
+     * @type String
+     * @desc 绑定域名
+     */
     host: '/',
+
+    /**
+     * @type String
+     * @desc 访问目录
+     */
     dirname: '/',
+
+    /**
+     * @type String
+     * @desc 上传文件
+     */
     filename: null,
+
+    /**
+     * @type Number
+     * @desc 签名有效期，单位毫秒
+     */
     expires: 10 * 60 * 1000,
+
+    /**
+     * @type String
+     * @desc MIME 限制
+     */
     mimeLimit: 'image/*',
-    // 是否绝对路径
-    // 是：转换后的 url 包含 @ 符号，即 http://qiniu.cdn.com/@/path/to/file.png，或者两个斜杆表示 http://qiniu.cdn.com//path/to/file.png
-    // 否：转换后的 url 不含 @ 符号，即 http://qiniu.cdn.com/path/to/file.png
+
+    /**
+     * @type Boolean
+     * @desc 是否绝对路径
+     * 是：转换后的 url 包含 @ 符号，即 http://qiniu.cdn.com/@/path/to/file.png，
+     * 或者两个斜杆表示 http://qiniu.cdn.com//path/to/file.png
+     * 否：转换后的 url 不含 @ 符号，即 http://qiniu.cdn.com/path/to/file.png
+     */
     absolutely: false
 };
 var slashStartRE = /^\//;
@@ -33,19 +78,18 @@ exports.defaults = defaults;
 
 /**
  * 覆盖默认配置
- * @param [configs] {Object} 配置
- * @param [configs.host="/"] {String} 域
- * @param [configs.bucket=""] {String} 仓库
- * @param [configs.accessKey=""] {String} access_key
- * @param [configs.secretKey=""] {String} secret_key
- * @param [configs.dirname="/"] {String} 上传目录
- * @param [configs.filename] {String} 上传文件名，否则随机生成
- * @param [configs.expires] {Number} 凭证有效期，默认 10 分钟，单位毫秒
- * @param [configs.mimeLimit="image/*"] {String} 上传文件限制类型
- * @param [configs.absolutely] {Boolean} 是否绝对路径
  */
-exports.config = function (configs) {
-    object.assign(defaults, configs);
+exports.config = function () {
+    return access.getSet({
+        get: function (key) {
+            return configs[key];
+        },
+        set: function (key, val) {
+            configs[key] = val;
+            afterConfigSet();
+        },
+        setLength: 2
+    }, arguments);
 };
 
 /**
