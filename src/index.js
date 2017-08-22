@@ -120,7 +120,7 @@ exports.signature = function (configs) {
     // }
 
     var key = path.join(configs.dirname, (configs.filename || random.guid()));
-    var qiniuURL = configs.host;
+    var qiniuURL = configs.host || configs.origin;
 
     if (configs.absolutely) {
         qiniuURL= url.join(qiniuURL, '@');
