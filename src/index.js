@@ -82,11 +82,10 @@ exports.defaults = defaults;
 exports.config = function () {
     return access.getSet({
         get: function (key) {
-            return configs[key];
+            return defaults[key];
         },
         set: function (key, val) {
-            configs[key] = val;
-            afterConfigSet();
+            defaults[key] = val;
         },
         setLength: 2
     }, arguments);

@@ -1,6 +1,6 @@
 {
   "name": "blear.node.qiniu",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "七牛 API",
   "scripts": {
     "live": "browser-sync start --config bs-config.js",
